@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  invoices     Invoice[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  sku         String      @unique
+  priceCents  Int
+  currency    String      @default("EUR")
+  stock       Int         @default(0)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  number          String      @unique
+  customerId      String
+  status          OrderStatus @default(PENDING)
+  subtotalCents   Int
+  taxCents        Int         @default(0)
+  totalCents      Int
+  currency        String      @default("EUR")
+  shippingAddress Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  items           OrderItem[]
+  payment         Payment?
+  invoice         Invoice?
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  productId      String
+  productName    String
+  quantity       Int
+  unitPriceCents Int
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  orderId                 String        @unique
+  provider                String        @default("stripe")
+  providerSessionId       String?       @unique
+  providerPaymentIntentId String?       @unique
+  status                  PaymentStatus @default(PENDING)
+  amountCents             Int
+  currency                String        @default("EUR")
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  order                   Order         @relation(fields: [orderId], references: [id])
+}
+
+model Invoice {
+  id         String   @id @default(cuid())
+  number     String   @unique
+  orderId    String   @unique
+  customerId String
+  totalCents Int
+  currency   String   @default("EUR")
+  issuedAt   DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id])
+}
