@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = req.headers.authorization?.replace(/^Bearer\\s+/i, '');
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'Authentification requise' });
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as { sub: string };
